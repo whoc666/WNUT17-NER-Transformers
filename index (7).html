@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NER Web Interface</title>
+    <!-- 样式部分：定义界面的外观 -->
+    <style>
+        body {
+            font-family: Arial, sans-serif; /* 使用Arial字体 */
+            max-width: 800px; /* 限制页面宽度 */
+            margin: 0 auto; /* 居中显示 */
+            padding: 20px; /* 内边距 */
+            background-color: #f4f4f9; /* 背景颜色 */
+        }
+        h1 {
+            text-align: center; /* 标题居中 */
+            color: #333; /* 标题颜色 */
+        }
+        .input-container {
+            margin-bottom: 20px; /* 输入区域下方的间距 */
+        }
+        textarea {
+            width: 100%; /* 文本框宽度 */
+            height: 100px; /* 文本框高度 */
+            padding: 10px; /* 内边距 */
+            font-size: 16px; /* 字体大小 */
+            border: 1px solid #ccc; /* 边框样式 */
+            border-radius: 4px; /* 圆角边框 */
+            resize: vertical; /* 允许垂直调整大小 */
+        }
+        button {
+            display: block; /* 按钮独占一行 */
+            width: 100%; /* 按钮宽度 */
+            padding: 10px; /* 内边距 */
+            background-color: #007bff; /* 背景颜色 */
+            color: white; /* 字体颜色 */
+            border: none; /* 无边框 */
+            border-radius: 4px; /* 圆角边框 */
+            font-size: 16px; /* 字体大小 */
+            cursor: pointer; /* 鼠标悬停时显示手型 */
+        }
+        button:hover {
+            background-color: #0056b3; /* 鼠标悬停时的背景颜色 */
+        }
+        #results {
+            margin-top: 20px; /* 结果区域上方的间距 */
+            padding: 15px; /* 内边距 */
+            background-color: white; /* 背景颜色 */
+            border: 1px solid #ddd; /* 边框样式 */
+            border-radius: 4px; /* 圆角边框 */
+        }
+        .entity {
+            padding: 2px 5px; /* 实体标签的内边距 */
+            margin: 0 2px; /* 外边距 */
+            border-radius: 3px; /* 圆角边框 */
+            font-weight: bold; /* 字体加粗 */
+        }
+        /* 为WNUT-17标签设置颜色 */
+        .B-person { background-color: #ffcccb; } /* 人名 */
+        .I-person { background-color: #ffcccb; }
+        .B-location { background-color: #90ee90; } /* 地点 */
+        .I-location { background-color: #90ee90; }
+        .B-organization { background-color: #add8e6; } /* 组织 */
+        .I-organization { background-color: #add8e6; }
+        .B-corporation { background-color: #add8e6; }
+        .I-corporation { background-color: #add8e6; }
+        .B-group { background-color: #add8e6; }
+        .I-group { background-color: #add8e6; }
+        .B-product { background-color: #ffe4b5; } /* 产品 */
+        .I-product { background-color: #ffe4b5; }
+        .B-creative-work { background-color: #ffe4b5; } /* 创意作品 */
+        .I-creative-work { background-color: #ffe4b5; }
+    </style>
+</head>
+<body>
+    <!-- 页面标题 -->
+    <h1>Named Entity Recognition (NER) Interface</h1>
+    <!-- 输入区域：文本框和按钮 -->
+    <div class="input-container">
+        <textarea id="inputText" placeholder="Enter text to analyze..."></textarea>
+        <button onclick="predictEntities()">Predict Entities</button>
+    </div>
+    <!-- 结果显示区域 -->
+    <div id="results"></div>
+
+    <!-- 加载transformers.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@huggingface/transformers@2.7.0/dist/transformers.min.js"></script>
+    <script>
+        let pipeline = null; // 用于存储NER pipeline
+
+        // 检查网络连接
+        async function checkNetwork() {
+            try {
+                await fetch("https://huggingface.co/your-username/wnut17-ner");
+                console.log("Network check: Able to reach Hugging Face model repository.");
+                return true;
+            } catch (error) {
+                console.error("Network check failed:", error);
+                throw new Error("Cannot connect to Hugging Face model repository. Please check your network.");
+            }
+        }
+
+        // 初始化NER pipeline（加载模型）
+        async function initializePipeline() {
+            if (!pipeline) {
+                console.log("Loading NER model..."); // 打印加载提示
+                try {
+                    // 检查网络连接
+                    await checkNetwork();
+                    // 使用transformers.js加载你的模型
+                    pipeline = await transformers.pipeline("token-classification", {
+                        model: "your-username/wnut17-ner", // 替换为你的模型路径
+                        use_gpu: false // 禁用GPU
+                    });
+                    console.log("Model loaded successfully!"); // 加载成功提示
+                } catch (error) {
+                    console.error("Failed to load model:", error);
+                    throw new Error("Model loading failed: " + error.message);
+                }
+            }
+            return pipeline;
+        }
+
+        // 预测实体
+        async function predictEntities() {
+            // 获取用户输入的文本
+            const inputText = document.getElementById("inputText").value.trim();
+            const resultsDiv = document.getElementById("results");
+
+            // 检查输入是否为空
+            if (!inputText) {
+                resultsDiv.innerHTML = "<p style='color: red;'>Please enter some text!</p>";
+                return;
+            }
+
+            // 显示加载提示
+            resultsDiv.innerHTML = "<p>Loading...</p>";
+
+            try {
+                // 确保pipeline已加载
+                const nerPipeline = await initializePipeline();
+
+                // 进行NER预测
+                console.log("Predicting entities for text:", inputText);
+                const entities = await nerPipeline(inputText, { aggregation_strategy: "simple" });
+                console.log("Entities predicted:", entities);
+
+                // 如果没有识别到实体
+                if (entities.length === 0) {
+                    resultsDiv.innerHTML = "<p>No entities found.</p>";
+                    return;
+                }
+
+                // 处理预测结果，显示高亮的实体
+                let outputHtml = "";
+                let currentIndex = 0;
+
+                for (const entity of entities) {
+                    const entityStart = entity.start;
+                    const entityEnd = entity.end;
+                    const entityType = entity.entity_group;
+
+                    // 添加实体前的文本
+                    if (currentIndex < entityStart) {
+                        const beforeText = inputText.slice(currentIndex, entityStart);
+                        outputHtml += beforeText.replace(/\s+/g, " ");
+                    }
+
+                    // 添加实体（高亮显示）
+                    const entityText = inputText.slice(entityStart, entityEnd);
+                    outputHtml += `<span class="entity ${entityType}">${entityText} (${entityType})</span>`;
+                    currentIndex = entityEnd;
+                }
+
+                // 添加剩余文本
+                if (currentIndex < inputText.length) {
+                    outputHtml += inputText.slice(currentIndex).replace(/\s+/g, " ");
+                }
+
+                // 显示结果
+                resultsDiv.innerHTML = outputHtml;
+            } catch (error) {
+                // 捕获错误并显示详细错误信息
+                console.error("Prediction error:", error);
+                resultsDiv.innerHTML = `<p style='color: red;'>Error during prediction: ${error.message}. Please check your network connection or try a different browser.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
