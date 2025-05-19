@@ -97,7 +97,7 @@ python -m http.server 8000
 
 
 部署：
-网页托管在GitHub Pages，地址为https://whoc666.github.io/WNUT17-NER-Transformers/。
+网页托管在GitHub Pages，地址为https://whoc666.github.io/WNUT17-NER-Transformers/
 
 
 依赖：
